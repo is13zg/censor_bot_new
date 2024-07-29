@@ -9,7 +9,7 @@ import config
 import create_bot
 
 router = Router()
-router.chat_member.filter(F.chat.id == config.main_chat_id)
+router.chat_member.filter(F.chat.id.in_(config.main_chat_ids))
 
 
 @router.chat_member(

@@ -17,8 +17,9 @@ admin_ids = set()
 # id админов, далее обновится из бд
 async def init_admins():
     global admin_ids
-    admins = await bot.get_chat_administrators(config.main_chat_id)
-    admin_ids = {admin.user.id for admin in admins}
+    for chat_id in config.main_chat_ids:
+        admins = await bot.get_chat_administrators(chat_id)
+        admin_ids.update({admin.user.id for admin in admins})
     admin_ids.add(config.main_chat_anonymous_bot_id)
     await create_bot.send_info_message("Current admins:" + str(admin_ids))
 
