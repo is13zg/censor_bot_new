@@ -25,10 +25,10 @@ def get_message_link(tlg_msg: types.Message) -> str:
 
 
 # отправка сообщение и ограничение по времени
-async def ban_action_and_msg(tlg_msg, text, ban_msg, ban_time=5):
+async def ban_action_and_msg(tlg_msg, text, ban_msg, ban_time=5, ban_reason="default"):
     try:
         await bot.send_message(config.Support_chat_id,
-                               text=f" @{tlg_msg.from_user.username} написал:{text}\n его забанили")
+                               text=f" @{tlg_msg.from_user.username} написал:{text}\n его забанили \n Причина {ban_reason} \n ID преступника = {tlg_msg.from_user.id}")
         await bot.send_message(tlg_msg.chat.id,
                                ban_msg + f"Вы не сможете отправлять собщения в чат {str(ban_time)} минут")
         await bot.restrict_chat_member(tlg_msg.chat.id, tlg_msg.from_user.id,
@@ -43,7 +43,7 @@ async def ban_action_and_msg(tlg_msg, text, ban_msg, ban_time=5):
 async def warning_msg(tlg_msg, text, to_attention):
     try:
         await bot.send_message(config.Support_chat_id,
-                               text=f"@{tlg_msg.from_user.username} написал:\n{text}\n{get_message_link(tlg_msg)}\nПод подозрением:\n{to_attention}")
+                               text=f"@{tlg_msg.from_user.username} написал:\n{text}\n{get_message_link(tlg_msg)}\nПод подозрением:\n{to_attention} \n ID преступника = {tlg_msg.from_user.id}")
 
     except Exception as e:
         await create_bot.send_debug_message(__name__, inspect.currentframe().f_code.co_name, e)
@@ -54,9 +54,12 @@ async def warning_msg(tlg_msg, text, to_attention):
 @router.message(~IsAdmin())
 async def moderate_message(msg: types.Message):
     try:
+
+        ban_reason = ""
         # check forwarding
         if msg.forward_from:
-            await ban_action_and_msg(msg, str(msg), f" @{msg.from_user.username} Пересылка сообщений запрещена.", 5)
+            await ban_action_and_msg(msg, str(msg), f" @{msg.from_user.username} Пересылка сообщений запрещена.", 5,
+                                     ban_reason="forwarding")
             return
 
         if msg.content_type == ContentType.NEW_CHAT_MEMBERS:
@@ -85,7 +88,7 @@ async def moderate_message(msg: types.Message):
                     {"mention", "url", "text_link", "phone_number", "email", "text_mention"})) > 0:
                 await ban_action_and_msg(msg, text,
                                          f" @{msg.from_user.username} Отправка ссылок, номеров, email в чат запрещена.",
-                                         10)
+                                         10, ban_reason="restricter types of entities")
                 return
 
             # check censor
@@ -106,14 +109,15 @@ async def moderate_message(msg: types.Message):
                 new_str = " ".join(new_msg)
                 await ban_action_and_msg(msg, text,
                                          f" @{msg.from_user.username} написал:\n" + new_str + "\nРугательства запрещены.",
-                                         10)
+                                         10, ban_reason="censor module handler")
                 return
             else:
                 await warning_msg(msg, text, ' '.join(censor_ls[3]))
 
         if (len({word.lower().translate(str.maketrans('', "", string.punctuation)) for word in
                  text.split(" ")}.intersection(init_data.bad_words)) != 0):
-            await ban_action_and_msg(msg, text, f" @{msg.from_user.username} ваше сообщение запрещено.", 10)
+            await ban_action_and_msg(msg, text, f" @{msg.from_user.username} ваше сообщение запрещено.", 10,
+                                     ban_reason="BAD_WORDS in msg")
             return
     except Exception as e:
         await create_bot.send_debug_message(__name__, inspect.currentframe().f_code.co_name, e)

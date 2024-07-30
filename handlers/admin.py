@@ -1,7 +1,7 @@
 from create_bot import bot
 from aiogram.filters import Command
 from aiogram.types import Message
-from aiogram import Router
+from aiogram import Router, F
 import config
 import create_bot
 import inspect
@@ -10,7 +10,6 @@ import init_data
 import datetime
 import json
 from aiogram.types import FSInputFile
-
 
 router = Router()
 
@@ -77,10 +76,11 @@ async def helppp(msg: Message):
     try:
         await msg.reply(
             """
-    По команде /new_bad можно добавить одно или несколько стоп-слов через пробел, данные слова нельзя будет использовать обычным пользователям в чате
+    По команде /add_bad можно добавить одно или несколько стоп-слов через пробел, данные слова нельзя будет использовать обычным пользователям в чате
     По команде /del_bad можно удалить одно или несколько стоп-слов через пробел
     По команде /ban можно забанить пользователя на 10 дней.Нужно ответить на его сообщение
     По команде /reserv можно получить файл ограничений
+    По команде /add_admin_id добавляет id в список разрешенных, нужно обновлять после перезапуска
             """
         )
     except Exception as e:
@@ -92,5 +92,21 @@ async def make_reserv_data(msg: Message):
     try:
         await bot.send_document(msg.chat.id, FSInputFile(config.BAD_WORDS_FILE))
 
+    except Exception as e:
+        await create_bot.send_debug_message(__name__, inspect.currentframe().f_code.co_name, e)
+
+
+@router.message(Command(commands=["add_admin_id"]), F.from_user.id == config.Owner_id)
+async def new_bad_words(msg: Message):
+    try:
+        new_admin_ids = set(map(int, msg.text.split()[1:]))
+        new_admin_ids = init_data.admin_ids.union(new_admin_ids)
+        if init_data.admin_ids == new_admin_ids:
+            await bot.send_message(msg.chat.id,
+                                   "ID НЕ добавлены. Текущий список:\n" + (" ").join(map(str, init_data.admin_ids)))
+        else:
+            init_data.admin_ids = new_admin_ids
+            await bot.send_message(msg.chat.id,
+                                   "ID добавлены. Текущий список:\n" + (" ").join(map(str, init_data.admin_ids)))
     except Exception as e:
         await create_bot.send_debug_message(__name__, inspect.currentframe().f_code.co_name, e)

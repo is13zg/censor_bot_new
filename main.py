@@ -9,7 +9,7 @@ async def main() -> None:
 
     dp.include_router(admin.router)
     dp.include_router(censor_handler.router)
-    dp.include_router   (admin_changes_in_group.router)
+    dp.include_router(admin_changes_in_group.router)
 
     await init_data.init_admins()
 
